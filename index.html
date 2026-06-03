@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KU Book Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1208; --parchment: #fdf6e3; --cream: #f5ead0;
+    --amber: #c8821a; --read: #2d6a4f; --read-bg: #d8f3dc;
+    --unread-bg: #fff3cd; --shadow: rgba(26,18,8,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--parchment); color: var(--ink); min-height: 100vh; }
+  .wrapper { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+  header { text-align: center; margin-bottom: 36px; }
+  h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; }
+  .subtitle { color: #7a6a4a; margin-top: 6px; font-size: 0.95rem; }
+  .card { background: white; border: 2px dashed #d4b87a; border-radius: 14px; padding: 24px; margin-bottom: 24px; }
+  .card.done { border-color: #2d6a4f; border-style: solid; }
+  .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--amber); margin-bottom: 10px; display: block; }
+  textarea { width: 100%; min-height: 120px; border: 1px solid #e0d0b0; border-radius: 8px; padding: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; resize: vertical; outline: none; }
+  .row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
+  .count { font-size: 0.85rem; color: #9a8a6a; }
+  .count strong { color: var(--amber); }
+  .btn { padding: 11px 22px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+  .btn-primary { background: var(--amber); color: white; }
+  .btn-primary:hover { background: #a86010; }
+  .btn-secondary { background: var(--cream); color: var(--ink); border: 2px solid #d4b87a; }
+  .search-row { display: flex; gap: 12px; margin-bottom: 28px; }
+  .search-wrap { flex: 1; position: relative; }
+  .search-wrap svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: #b8a880; }
+  input[type=text] { width: 100%; padding: 13px 13px 13px 40px; border: 2px solid #e0d0b0; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; background: white; }
+  input[type=text]:focus { border-color: var(--amber); }
+  .suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 2px solid var(--amber); border-radius: 10px; box-shadow: 0 8px 24px var(--shadow); z-index: 100; max-height: 200px; overflow-y: auto; display: none; }
+  .sug-item { padding: 10px 16px; cursor: pointer; font-size: 0.9rem; display: flex; justify-content: space-between; border-bottom: 1px solid #f0e8d4; }
+  .sug-item:last-child { border-bottom: none; }
+  .sug-item:hover { background: #fdf0d0; }
+  .sug-count { font-size: 0.78rem; color: #9a8a6a; }
+  .stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat { background: white; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 90px; text-align: center; box-shadow: 0 2px 8px var(--shadow); }
+  .stat-n { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 700; }
+  .stat-l { font-size: 0.72rem; color: #9a8a6a; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+  .n-total { color: var(--ink); } .n-read { color: var(--read); } .n-unread { color: var(--amber); }
+  .results-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-style: italic; margin-bottom: 16px; }
+  .book-grid { display: grid; gap: 10px; }
+  .book-card { background: white; border-radius: 11px; padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px; box-shadow: 0 2px 8px var(--shadow); }
+  .spine { width: 5px; min-height: 44px; border-radius: 3px; flex-shrink: 0; align-self: stretch; background: var(--amber); }
+  .book-info { flex: 1; }
+  .book-title { font-family: 'Playfair Display', serif; font-size: 0.98rem; line-height: 1.35; }
+  .book-tags { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+  .ku-tag { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .ku-likely { background: #e8f4fd; color: #1a6fa8; border: 1px solid #a8d4f0; }
+  .ku-unlikely { background: #fce8e8; color: #a83232; border: 1px solid #f0a8a8; }
+  .ku-unknown { background: #f0f0f0; color: #666; border: 1px solid #ccc; }
+  .amz-link { font-size: 0.72rem; color: var(--amber); text-decoration: none; font-weight: 500; border-bottom: 1px dotted #e8a83a; }
+  .amz-link:hover { color: #8a5010; }
+  .notice { background: #fffbe8; border: 1px solid #e8d890; border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: #7a6a20; margin-bottom: 16px; }
+  .empty { text-align: center; padding: 50px 20px; color: #9a8a6a; }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid #d4b87a; border-top-color: var(--amber); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { font-size: 0.85rem; color: #9a8a6a; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <h1>📚 KU Book Tracker</h1>
+    <p class="subtitle">Paste your Kindle Unlimited history, search an author, see what you have not read yet</p>
+  </header>
+
+  <div class="card" id="pasteCard">
+    <span class="label">Step 1 — Paste your KU Borrowing History</span>
+    <textarea id="hist" placeholder="Go to Amazon › Account › Kindle Unlimited › Borrowing History. Select all text on the page and paste it here."></textarea>
+    <div class="row">
+      <span class="count" id="countMsg">No books detected yet</span>
+      <button class="btn btn-secondary" id="parseBtn">Parse History</button>
+    </div>
+  </div>
+
+  <div class="search-row">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="authorInput" placeholder="Type an author name..." autocomplete="off">
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+    <button class="btn btn-primary" id="findBtn">Find Books</button>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script>
+var readBooks = {};
+var authorMap = {};
+
+function parseHistory() {
+  var raw = document.getElementById('hist').value;
+  if (!raw.trim()) { alert('Please paste your KU history first.'); return; }
+
+  readBooks = {};
+  authorMap = {};
+
+  var lines = raw.split(/\r?\n/);
+  var clean = [];
+  for (var x = 0; x < lines.length; x++) {
+    var t = lines[x].trim();
+    if (t.length > 0) clean.push(t);
+  }
+
+  for (var i = 0; i < clean.length; i++) {
+    if (!/^by\s+[A-Za-z]/i.test(clean[i])) continue;
+    var author = clean[i].replace(/^by\s+/i, '').trim();
+    if (author.length < 2) continue;
+
+    var title = '';
+    for (var j = i - 1; j >= Math.max(0, i - 6); j--) {
+      var prev = clean[j];
+      if (/^(Kindle Unlimited|Return$|Read now|Returned|Borrowed on:)/i.test(prev)) continue;
+      if (/^\d+\s+of\s+\d+$/.test(prev)) continue;
+      title = prev.replace(/,?\s*\d+\s+of\s+\d+\s*$/, '').trim();
+      if (title.length > 1) break;
+    }
+    if (!title) continue;
+
+    var dateStr = '';
+    for (var k = i + 1; k < Math.min(i + 7, clean.length); k++) {
+      var m = clean[k].match(/Borrowed on:\s*(.+)/);
+      if (m) { dateStr = m[1].trim(); break; }
+    }
+
+    var key = normKey(title);
+    if (readBooks[key]) continue;
+    readBooks[key] = { title: title, author: author, date: dateStr };
+    var ak = author.toLowerCase();
+    authorMap[ak] = (authorMap[ak] || 0) + 1;
+  }
+
+  var count = Object.keys(readBooks).length;
+  var msg = document.getElementById('countMsg');
+  if (count > 0) {
+    msg.innerHTML = '<strong>' + count + '</strong> books detected';
+    document.getElementById('pasteCard').classList.add('done');
+  } else {
+    msg.innerHTML = 'No books found — make sure you pasted the full page text';
+  }
+}
+
+document.getElementById('parseBtn').addEventListener('click', parseHistory);
+document.getElementById('hist').addEventListener('paste', function() { setTimeout(parseHistory, 200); });
+
+document.getElementById('authorInput').addEventListener('input', function() {
+  var q = this.value.toLowerCase().trim();
+  var box = document.getElementById('suggestions');
+  if (!q || Object.keys(authorMap).length === 0) { box.style.display = 'none'; return; }
+  var matches = [];
+  for (var name in authorMap) {
+    if (name.indexOf(q) !== -1) matches.push([name, authorMap[name]]);
+  }
+  matches.sort(function(a,b){ return b[1]-a[1]; });
+  matches = matches.slice(0, 8);
+  if (!matches.length) { box.style.display = 'none'; return; }
+  var html = '';
+  for (var i = 0; i < matches.length; i++) {
+    var display = toTitle(matches[i][0]);
+    var cnt = matches[i][1];
+    html += '<div class="sug-item" onclick="pickAuthor(\'' + display.replace(/'/g, "\\'") + '\')">'
+          + '<span>' + display + '</span><span class="sug-count">' + cnt + ' read</span></div>';
+  }
+  box.innerHTML = html;
+  box.style.display = 'block';
+});
+
+document.getElementById('authorInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') findBooks();
+  if (e.key === 'Escape') document.getElementById('suggestions').style.display = 'none';
+});
+document.getElementById('findBtn').addEventListener('click', findBooks);
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrap')) document.getElementById('suggestions').style.display = 'none';
+});
+
+function pickAuthor(name) {
+  document.getElementById('authorInput').value = name;
+  document.getElementById('suggestions').style.display = 'none';
+  findBooks();
+}
+
+function toTitle(s) {
+  return s.replace(/\w\S*/g, function(w){ return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); });
+}
+
+function normKey(t) {
+  return t.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 50);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+async function findBooks() {
+  document.getElementById('suggestions').style.display = 'none';
+  var author = document.getElementById('authorInput').value.trim();
+  if (!author) return;
+
+  var btn = document.getElementById('findBtn');
+  btn.disabled = true;
+  btn.textContent = 'Searching...';
+
+  var resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = '<div class="status"><span class="spinner"></span>Searching for all books by ' + escHtml(author) + ' (using web search for accuracy)...</div>';
+
+  try {
+    var authorKey = author.toLowerCase();
+    var readByAuthor = [];
+    for (var k in readBooks) {
+      if (readBooks[k].author.toLowerCase() === authorKey) readByAuthor.push(readBooks[k]);
+    }
+    var readKeys = {};
+    for (var i = 0; i < readByAuthor.length; i++) readKeys[normKey(readByAuthor[i].title)] = true;
+
+    // Use web search tool so we get accurate, up-to-date bibliography
+    var prompt = 'Use web search to find the complete and current list of all books written by "' + author + '" as of 2026. Search for "' + author + ' complete book list 2026" or similar. Return ONLY a JSON array, no markdown, no explanation. Each object must have: {"title": "Exact Book Title", "year": 2024, "ku": true}. Set ku=true if the book is likely on Kindle Unlimited (self-published or small press authors tend to use KU), ku=false if it is almost certainly NOT on KU (major Big 5 publisher hardcover releases), ku=null if unsure. Include all novels, novellas, and short story collections. Do not include duplicates. If you cannot find the author, return [].';
+
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    var data = await resp.json();
+
+    // Extract text from response - may be across multiple content blocks
+    var raw = '';
+    if (data.content) {
+      for (var i = 0; i < data.content.length; i++) {
+        if (data.content[i].type === 'text') raw += data.content[i].text;
+      }
+    }
+
+    raw = raw.replace(/```json|```/g, '').trim();
+    // Find JSON array in the response
+    var startIdx = raw.indexOf('[');
+    var endIdx = raw.lastIndexOf(']');
+    if (startIdx !== -1 && endIdx !== -1) raw = raw.substring(startIdx, endIdx + 1);
+
+    var allBooks = [];
+    try { allBooks = JSON.parse(raw); } catch(e) { allBooks = []; }
+
+    var unread = [];
+    var readCount = 0;
+    var seen = {};
+
+    // Build a smarter match function - web titles are often shorter than KU history titles
+    // e.g. web: "The Inmate", history: "The Inmate: A gripping psychological thriller"
+    // Require at least 10 chars to avoid short title false positives (e.g. "Baby City" matching "Baby")
+    function isRead(webNk) {
+      if (readKeys[webNk]) return true;
+      if (webNk.length < 8) return false;
+      for (var rk in readKeys) {
+        if (rk.length < 8) continue;
+        if (rk.startsWith(webNk) || webNk.startsWith(rk)) return true;
+      }
+      return false;
+    }
+
+    for (var i = 0; i < allBooks.length; i++) {
+      var b = allBooks[i];
+      if (!b.title) continue;
+      var nk = normKey(b.title);
+      if (seen[nk]) continue;
+      seen[nk] = true;
+      if (isRead(nk)) { readCount++; } else { unread.push(b); }
+    }
+
+    // Count read books Claude may not have listed
+    for (var i = 0; i < readByAuthor.length; i++) {
+      var nk = normKey(readByAuthor[i].title);
+      if (!seen[nk]) { seen[nk] = true; readCount++; }
+    }
+
+    var total = unread.length + readCount;
+    renderResults(author, unread, readCount, total);
+
+  } catch(err) {
+    resultsEl.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Error: ' + escHtml(err.message) + '</p></div>';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Find Books';
+}
+
+function renderResults(author, unread, readCount, total) {
+  var el = document.getElementById('results');
+  if (total === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>No books found for "' + escHtml(author) + '". Try checking the spelling.</p></div>';
+    return;
+  }
+
+  var cards = '';
+  for (var i = 0; i < unread.length; i++) {
+    var b = unread[i];
+    var kuTag = b.ku === true
+      ? '<span class="ku-tag ku-likely">KU Likely</span>'
+      : b.ku === false
+        ? '<span class="ku-tag ku-unlikely">Not KU</span>'
+        : '<span class="ku-tag ku-unknown">KU?</span>';
+    var amzUrl = 'https://www.amazon.com/s?k=' + encodeURIComponent(b.title + ' Kindle') + '&i=digital-text';
+    var yr = b.year ? '<span style="font-size:0.78rem;color:#9a8a6a">' + b.year + '</span>' : '';
+    cards += '<div class="book-card">'
+           + '<div class="spine"></div>'
+           + '<div class="book-info">'
+           + '<div class="book-title">' + escHtml(b.title) + '</div>'
+           + '<div class="book-tags">' + kuTag + yr + '<a class="amz-link" href="' + amzUrl + '" target="_blank">Check on Amazon &#8599;</a></div>'
+           + '</div></div>';
+  }
+
+  var allReadMsg = unread.length === 0
+    ? '<p style="color:#2d6a4f;font-weight:500;margin-bottom:16px">&#10003; You&#39;ve read everything by this author!</p>'
+    : '';
+
+  el.innerHTML = '<div class="stats">'
+    + '<div class="stat"><div class="stat-n n-total">' + total + '</div><div class="stat-l">Total Books</div></div>'
+    + '<div class="stat"><div class="stat-n n-read">' + readCount + '</div><div class="stat-l">Already Read</div></div>'
+    + '<div class="stat"><div class="stat-n n-unread">' + unread.length + '</div><div class="stat-l">Left to Read</div></div>'
+    + '</div>'
+    + '<p class="notice">&#128269; Book list sourced via web search for accuracy. KU availability is approximate &#8212; always verify on Amazon.</p>'
+    + '<div class="results-title">' + escHtml(author) + '</div>'
+    + allReadMsg
+    + (unread.length > 0 ? '<div class="book-grid">' + cards + '</div>' : '');
+}
+</script>
+</body>
+</html>
